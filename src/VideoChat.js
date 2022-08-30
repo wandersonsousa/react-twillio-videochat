@@ -31,6 +31,8 @@ const VideoChat = () => {
           "Content-Type": "application/json",
         },
       }).then((res) => res.json());
+
+      console.log("data from video/token", data);
       Video.connect(data.token, {
         name: roomName,
       })
