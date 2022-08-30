@@ -1,51 +1,93 @@
-import React, { useEffect, useState } from "react";
-import Participant from "./Participant";
+import React, { useState, useEffect, useRef } from "react";
 
-const Room = ({ roomName, room, handleLogout }) => {
-  const [participants, setParticipants] = useState([]);
+import Controls from "./Controls";
+
+const Participant = ({
+  participant,
+  handleCallDisconnect,
+  handleAudioToggle,
+  handleVideoToggle,
+  toggleAudio,
+  toggleVideo,
+  isLocal,
+}) => {
+  const [videoTracks, setVideoTracks] = useState([]);
+  const [audioTracks, setAudioTracks] = useState([]);
+
+  const videoRef = useRef();
+  const audioRef = useRef();
+
+  const trackpubsToTracks = (trackMap) =>
+    Array.from(trackMap.values())
+      .map((publication) => publication.track)
+      .filter((track) => track !== null);
 
   useEffect(() => {
-    const participantConnected = (participant) => {
-      setParticipants((prevParticipants) => [...prevParticipants, participant]);
+    setVideoTracks(trackpubsToTracks(participant.videoTracks));
+    setAudioTracks(trackpubsToTracks(participant.audioTracks));
+
+    const trackSubscribed = (track) => {
+      if (track.kind === "video") {
+        setVideoTracks((videoTracks) => [...videoTracks, track]);
+      } else {
+        setAudioTracks((audioTracks) => [...audioTracks, track]);
+      }
     };
 
-    const participantDisconnected = (participant) => {
-      setParticipants((prevParticipants) =>
-        prevParticipants.filter((p) => p !== participant)
-      );
+    const trackUnsubscribed = (track) => {
+      if (track.kind === "video") {
+        setVideoTracks((videoTracks) => videoTracks.filter((v) => v !== track));
+      } else {
+        setAudioTracks((audioTracks) => audioTracks.filter((a) => a !== track));
+      }
     };
 
-    room.on("participantConnected", participantConnected);
-    room.on("participantDisconnected", participantDisconnected);
-    room.participants.forEach(participantConnected);
+    participant.on("trackSubscribed", trackSubscribed);
+    participant.on("trackUnsubscribed", trackUnsubscribed);
+
     return () => {
-      room.off("participantConnected", participantConnected);
-      room.off("participantDisconnected", participantDisconnected);
+      setVideoTracks([]);
+      setAudioTracks([]);
+      participant.removeAllListeners();
     };
-  }, [room]);
+  }, [participant]);
 
-  const remoteParticipants = participants.map((participant) => (
-    <Participant key={participant.sid} participant={participant} />
-  ));
+  useEffect(() => {
+    const videoTrack = videoTracks[0];
+    if (videoTrack) {
+      videoTrack.attach(videoRef.current);
+      return () => {
+        videoTrack.detach();
+      };
+    }
+  }, [videoTracks]);
+
+  useEffect(() => {
+    const audioTrack = audioTracks[0];
+    if (audioTrack) {
+      audioTrack.attach(audioRef.current);
+      return () => {
+        audioTrack.detach();
+      };
+    }
+  }, [audioTracks]);
 
   return (
-    <div className="room">
-      <h2>Room: {roomName}</h2>
-      <button onClick={handleLogout}>Log out</button>
-      <div className="local-participant">
-        {room ? (
-          <Participant
-            key={room.localParticipant.sid}
-            participant={room.localParticipant}
-          />
-        ) : (
-          ""
-        )}
-      </div>
-      <h3>Remote Participants</h3>
-      <div className="remote-participants">{remoteParticipants}</div>
+    <div className="participant" style={{ position: "relative" }}>
+      <h3>{participant.identity}</h3>
+      <video ref={videoRef} autoPlay={true} />
+      <audio ref={audioRef} autoPlay={true} />
+      {isLocal && (
+        <Controls
+          handleCallDisconnect={handleCallDisconnect}
+          handleAudioToggle={handleAudioToggle}
+          handleVideoToggle={handleVideoToggle}
+          audio={toggleAudio}
+          video={toggleVideo}
+        />
+      )}
     </div>
   );
 };
 
-export default Room;
+export default Participant;

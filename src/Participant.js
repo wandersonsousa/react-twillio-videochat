@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const Participant = ({ participant }) => {
+import Controls from "./Controls";
+
+const Participant = ({
+  participant,
+  handleCallDisconnect,
+  handleAudioToggle,
+  handleVideoToggle,
+  toggleAudio,
+  toggleVideo,
+  isLocal,
+}) => {
   const [videoTracks, setVideoTracks] = useState([]);
   const [audioTracks, setAudioTracks] = useState([]);
 
@@ -19,7 +29,7 @@ const Participant = ({ participant }) => {
     const trackSubscribed = (track) => {
       if (track.kind === "video") {
         setVideoTracks((videoTracks) => [...videoTracks, track]);
-      } else if (track.kind === "audio") {
+      } else {
         setAudioTracks((audioTracks) => [...audioTracks, track]);
       }
     };
@@ -27,7 +37,7 @@ const Participant = ({ participant }) => {
     const trackUnsubscribed = (track) => {
       if (track.kind === "video") {
         setVideoTracks((videoTracks) => videoTracks.filter((v) => v !== track));
-      } else if (track.kind === "audio") {
+      } else {
         setAudioTracks((audioTracks) => audioTracks.filter((a) => a !== track));
       }
     };
@@ -63,10 +73,19 @@ const Participant = ({ participant }) => {
   }, [audioTracks]);
 
   return (
-    <div className="participant">
+    <div className="participant" style={{ position: "relative" }}>
       <h3>{participant.identity}</h3>
       <video ref={videoRef} autoPlay={true} />
-      <audio ref={audioRef} autoPlay={true} muted={true} />
+      <audio ref={audioRef} autoPlay={true} />
+      {isLocal && (
+        <Controls
+          handleCallDisconnect={handleCallDisconnect}
+          handleAudioToggle={handleAudioToggle}
+          handleVideoToggle={handleVideoToggle}
+          audio={toggleAudio}
+          video={toggleVideo}
+        />
+      )}
     </div>
   );
 };
