@@ -1,11 +1,11 @@
 import React from "react";
 import styled from "styled-components";
 
-import Mic from "./assets/microphone.svg";
-import MicOff from "./assets/mute.svg";
-import Video from "./assets/video-camera.svg";
-import VideoOff from "./assets/no-video.svg";
-import End from "./assets/end.svg";
+const Mic = "/assets/microphone.svg"; 
+const MicOff = "/assets/mute.svg";
+const Video = "/assets/video-camera.svg";
+const VideoOff = "/assets/no-video.svg";
+const End = "/assets/end.svg";
 
 const Controls = ({
   handleCallDisconnect,
