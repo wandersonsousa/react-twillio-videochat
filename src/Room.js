@@ -1,93 +1,107 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
+import Video from "twilio-video";
+import Participant from "./Participant";
 
-import Controls from "./Controls";
-
-const Participant = ({
-  participant,
-  handleCallDisconnect,
-  handleAudioToggle,
-  handleVideoToggle,
-  toggleAudio,
-  toggleVideo,
-  isLocal,
-}) => {
-  const [videoTracks, setVideoTracks] = useState([]);
-  const [audioTracks, setAudioTracks] = useState([]);
-
-  const videoRef = useRef();
-  const audioRef = useRef();
-
-  const trackpubsToTracks = (trackMap) =>
-    Array.from(trackMap.values())
-      .map((publication) => publication.track)
-      .filter((track) => track !== null);
+const Room = ({ roomName, token, handleLogout }) => {
+  const [room, setRoom] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [toggleAudio, setToggleAudio] = useState(true);
+  const [toggleVideo, setToggleVideo] = useState(true);
 
   useEffect(() => {
-    setVideoTracks(trackpubsToTracks(participant.videoTracks));
-    setAudioTracks(trackpubsToTracks(participant.audioTracks));
-
-    const trackSubscribed = (track) => {
-      if (track.kind === "video") {
-        setVideoTracks((videoTracks) => [...videoTracks, track]);
-      } else {
-        setAudioTracks((audioTracks) => [...audioTracks, track]);
-      }
+    const participantConnected = (participant) => {
+      setParticipants((prevParticipants) => [...prevParticipants, participant]);
     };
 
-    const trackUnsubscribed = (track) => {
-      if (track.kind === "video") {
-        setVideoTracks((videoTracks) => videoTracks.filter((v) => v !== track));
-      } else {
-        setAudioTracks((audioTracks) => audioTracks.filter((a) => a !== track));
-      }
+    const participantDisconnected = (participant) => {
+      setParticipants((prevParticipants) =>
+        prevParticipants.filter((p) => p !== participant)
+      );
     };
 
-    participant.on("trackSubscribed", trackSubscribed);
-    participant.on("trackUnsubscribed", trackUnsubscribed);
+    Video.connect(token, {
+      name: roomName,
+    }).then((room) => {
+      setRoom(room);
+      room.on("participantConnected", participantConnected);
+      room.on("participantDisconnected", participantDisconnected);
+      room.participants.forEach(participantConnected);
+    });
 
     return () => {
-      setVideoTracks([]);
-      setAudioTracks([]);
-      participant.removeAllListeners();
+      setRoom((currentRoom) => {
+        if (currentRoom && currentRoom.localParticipant.state === "connected") {
+          currentRoom.localParticipant.tracks.forEach(function (
+            trackPublication
+          ) {
+            trackPublication.track.stop();
+          });
+          currentRoom.disconnect();
+          return null;
+        } else {
+          return currentRoom;
+        }
+      });
     };
-  }, [participant]);
+  }, [roomName, token]);
 
-  useEffect(() => {
-    const videoTrack = videoTracks[0];
-    if (videoTrack) {
-      videoTrack.attach(videoRef.current);
-      return () => {
-        videoTrack.detach();
-      };
-    }
-  }, [videoTracks]);
+  const handleCallDisconnect = () => {
+    room.disconnect();
+  };
 
-  useEffect(() => {
-    const audioTrack = audioTracks[0];
-    if (audioTrack) {
-      audioTrack.attach(audioRef.current);
-      return () => {
-        audioTrack.detach();
-      };
-    }
-  }, [audioTracks]);
+  const handleAudioToggle = () => {
+    room.localParticipant.audioTracks.forEach((track) => {
+      if (track.track.isEnabled) {
+        track.track.disable();
+      } else {
+        track.track.enable();
+      }
+      setToggleAudio(track.track.isEnabled);
+    });
+  };
+
+  const handleVideoToggle = () => {
+    room.localParticipant.videoTracks.forEach((track) => {
+      if (track.track.isEnabled) {
+        track.track.disable();
+      } else {
+        track.track.enable();
+      }
+      setToggleVideo(track.track.isEnabled);
+    });
+  };
+
+  const remoteParticipants = participants.map((participant) => (
+    <Participant
+      key={participant.sid}
+      participant={participant}
+      isLocal={false}
+    />
+  ));
 
   return (
-    <div className="participant" style={{ position: "relative" }}>
-      <h3>{participant.identity}</h3>
-      <video ref={videoRef} autoPlay={true} />
-      <audio ref={audioRef} autoPlay={true} />
-      {isLocal && (
-        <Controls
-          handleCallDisconnect={handleCallDisconnect}
-          handleAudioToggle={handleAudioToggle}
-          handleVideoToggle={handleVideoToggle}
-          audio={toggleAudio}
-          video={toggleVideo}
-        />
-      )}
+    <div className="room">
+      <h2>Room: {roomName}</h2>
+      <button onClick={handleLogout}>Log out</button>
+      <div className="local-participant">
+        {room ? (
+          <Participant
+            key={room.localParticipant.sid}
+            participant={room.localParticipant}
+            handleAudioToggle={handleAudioToggle}
+            handleVideoToggle={handleVideoToggle}
+            handleCallDisconnect={handleCallDisconnect}
+            toggleAudio={toggleAudio}
+            toggleVideo={toggleVideo}
+            isLocal={true}
+          />
+        ) : (
+          ""
+        )}
+        {remoteParticipants}
+      </div>
     </div>
   );
 };
 
-export default Participant;
+export default Room;

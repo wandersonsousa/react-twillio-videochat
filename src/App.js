@@ -6,19 +6,13 @@ const App = () => {
   return (
     <div className="app">
       <header>
-        <h1>VideoChat</h1>
+        <h1>WebRTC videochat</h1>
       </header>
       <main>
         <VideoChat />
       </main>
       <footer>
-        <p>
-          Made with{" "}
-          <span role="img" aria-label="React">
-            ⚛️
-          </span>{" "}
-          by <a href="https://twitter.com/philnash">philnash</a>
-        </p>
+        <p>VideoChat</p>
       </footer>
     </div>
   );
