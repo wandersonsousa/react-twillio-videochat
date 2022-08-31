@@ -75,7 +75,13 @@ const Participant = ({
   return (
     <div className="participant" style={{ position: "relative" }}>
       <h3>{participant.identity}</h3>
-      <video ref={videoRef} autoPlay={true} height={450} width={600} />
+      <video
+        ref={videoRef}
+        autoPlay={true}
+        height={450}
+        width={600}
+        style={{ minWidth: 600, minHeight: 450 }}
+      />
       <audio ref={audioRef} autoPlay={true} />
       {isLocal && (
         <Controls
